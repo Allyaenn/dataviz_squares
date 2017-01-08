@@ -1,11 +1,6 @@
 // set the dimensions and margins of the graph
 var margin = {top: 20, right: 20, bottom: 50, left: 70};
-var width = 0, height = 0;
 var svg = d3.select("#image").append("svg");
-
-// set the ranges
-var x = 0;
-var y = 0;
 
 var squareSize = 20;
 
@@ -30,6 +25,7 @@ function processData(error, data) {
 
     save_data = data;
 
+    
     for (lab in data[0]) {
         if (lab[1] > 0 && lab[1] < 10) {
             noms_questions.push(lab);
@@ -39,21 +35,12 @@ function processData(error, data) {
         }
     }
 
-    //calcul du min/max
-    console.log(meta_data);
-
-
-
-    console.log(noms_questions);
-
-
-    // Scale the range of the data
-    console.log(data);
-
+    var dim = $("<div></div>").addClass("dimensions");
+    $(dim).appendTo("#filtre");
 
     for (md in meta_data) {
-        var div = $("<div></div>").addClass("test").html('<p><b>' + meta_data[md] + ': </b></p>');
-        $(div).appendTo("#filtre");
+        var div = $("<div></div>").addClass("dimension").html('<p><b>' + meta_data[md] + ': </b></p>');
+        $(div).appendTo(dim);
 
         //creation des données possibles pour cette colonne
         var valeurs = [];
@@ -65,14 +52,17 @@ function processData(error, data) {
         valeurs.sort();
         console.log(valeurs);
 
+        var list = $('<ul class="grid"></ul>');
+        $(list).appendTo(div);
+
         //parcours des données et générations des checkbox
         for (var i = 0; i < valeurs.length; i++) {
-            var check = $('<p><input type="checkbox" name=' + meta_data[md] + ' value="' + valeurs[i] + '" checked/><label>' + valeurs[i] + '</label></p>');
-            $(check).appendTo(div);
+            var check = $('<li><label><input type="checkbox" name=' + meta_data[md] + ' value="' + valeurs[i] + '" checked/>' + valeurs[i] + '</label></li>');
+            $(check).appendTo(list);
         }
 
     }
-    var button = $('<input type="button" value="filtre" onclick="filtre();"/>');
+    var button = $('<input type="button" class="btn" value="filter" onclick="filtre();"/>');
     $(button).appendTo("#filtre");
 
     var users = [];
@@ -97,7 +87,7 @@ function draw(data, nq, usrs) {
     console.log(tc);
 
     width = 20 * usrs.length;
-    height = 20 * noms_questions.length;
+    height = 20 * noms_questions.length + 100;
     svg.attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
@@ -109,6 +99,10 @@ function draw(data, nq, usrs) {
 
     y.domain(noms_questions);
 
+    var vp = [0,1,2,3,4,5];
+
+
+
     // Add the x Axis
     svg.append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
@@ -117,7 +111,7 @@ function draw(data, nq, usrs) {
     // text label for the x axis
     svg.append("text")
         .attr("transform",
-            "translate(" + (width/2) + " ," +
+            "translate(" + (width / 2) + " ," +
             ( margin.top - 5) + ")")
         .style("text-anchor", "middle")
         .text("Individus");
@@ -131,7 +125,7 @@ function draw(data, nq, usrs) {
     svg.append("text")
         .attr("transform", "rotate(-90)")
         .attr("y", 0)
-        .attr("x",0 - (height / 2))
+        .attr("x", 0 - (height / 2))
         .attr("dy", "1em")
         .style("text-anchor", "middle")
         .text("Questions");
@@ -141,21 +135,60 @@ function draw(data, nq, usrs) {
     rect = svg.selectAll('rect')
         .data(tc)
         .enter().append('rect')
-        .attr('width',squareSize-1)
-        .attr('height',squareSize-1)
-        .attr('x',function(d){
-            //console.log(d.user_id);
-            //console.log($.inArray(d, tc));
-            return squareSize*(d.pos_id) + margin.left+2;
+        .attr('width', squareSize - 1)
+        .attr('height', squareSize - 1)
+        .attr('x', function (d) {
+            return squareSize * (d.pos_id) + margin.left + 2;
         })
-        .attr('y',function(d){
-            return squareSize*d.index_question+ margin.top+2;
+        .attr('y', function (d) {
+            return squareSize * d.index_question + margin.top + 2;
         })
-        .attr('fill',function(d){
+        .attr('fill', function (d) {
             var resp = data[d.user_id][nq[d.index_question]];
             return color(resp);
         })
-        .on("mouseover", function(d){console.log(data[d.user_id][nq[d.index_question]])});
+        .on('mousemove', function(d) {
+            var mouse = d3.mouse(svg.node()).map(function(d) {
+                return parseInt(d);
+            });
+
+
+
+            d3.select("#tt").classed('hidden', false)
+                .attr('style', 'left:' + (mouse[0] + 15) +
+                    'px; top:' + (mouse[1]+70) + 'px')
+                .html("user : " + d.user_id+ " - question : " + noms_questions[d.index_question]);
+        })
+
+        .on('mouseout', function(){
+            d3.select("#tt").classed('hidden', true);
+        });
+
+        // affichage de la légende
+        var legend = svg.selectAll(".legend")
+            .data(vp)
+            .enter().append("g")
+            .attr("class", "legend")
+            .attr("transform", function(d, i) { return "translate("+ i * 20 + ",0)"; })
+
+        // remplissage des carrés avec les couleurs de l'échelle
+        legend.append("rect")
+            .attr("x", 15)
+            .attr("y", height-25)
+            .attr("width", 18)
+            .attr("height", 18)
+            .style("stroke", "black")
+            .style("fill", function(d) {return color(d);})
+
+
+        // affichage des valeurs représentées par la couleur
+        legend.append("text")
+            .attr("x", 25)
+            .attr("y", height)
+            .attr("dy", ".35em")
+            .style("text-anchor", "end")
+            .text(function(d) {return d});
+
 }
 
 function filtre(){
@@ -187,6 +220,5 @@ function filtre(){
 
     }
 
-    console.log(users);
     draw(save_data, noms_questions,users);
 }
