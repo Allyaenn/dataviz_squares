@@ -7,14 +7,15 @@ var squareSize = 20;
 var rect = null;
 
 var color = d3.scaleQuantize()
-    .range(['#fff7fb','#ece7f2','#d0d1e6','#a6bddb','#74a9cf','#3690c0','#0570b0','#045a8d','#023858'])
-    .domain([0,5]);
+    .range(['#ece7f2','#a6bddb','#74a9cf','#3690c0','#0570b0','#045a8d','#023858']);
 
 // Get the data
 var save_data;
 
+var valeurs_possibles = [];
+
 queue()
-    .defer(d3.csv, "data.csv")
+    .defer(d3.csv, "data2.csv")
     .await(processData);
 
 function processData(error, data) {
@@ -25,21 +26,35 @@ function processData(error, data) {
 
     save_data = data;
 
-    
+
     for (lab in data[0]) {
-        if (lab[1] > 0 && lab[1] < 10) {
+        if (lab[0] == "q" && lab[1] == "_" ) {
             noms_questions.push(lab);
         }
-        else {
+        else if (lab[0] == "m" && lab[1] == "_") {
             meta_data.push(lab);
         }
     }
+
+
+    for (var i = 0; i<data.length; i++){
+        for (var j=0; j<noms_questions.length; j++){
+            if ($.inArray(data[i][noms_questions[j]],valeurs_possibles) == -1){
+                valeurs_possibles.push(data[i][noms_questions[j]]);
+            }
+        }
+    }
+
+    valeurs_possibles.sort();
+    color.domain([valeurs_possibles[0], valeurs_possibles[valeurs_possibles.length-1]]);
+
+    console.log(valeurs_possibles);
 
     var dim = $("<div></div>").addClass("dimensions");
     $(dim).appendTo("#filtre");
 
     for (md in meta_data) {
-        var div = $("<div></div>").addClass("dimension").html('<p><b>' + meta_data[md] + ': </b></p>');
+        var div = $("<div></div>").addClass("dimension").html('<p><b>' + meta_data[md].slice(2) + ': </b></p>');
         $(div).appendTo(dim);
 
         //creation des données possibles pour cette colonne
@@ -70,11 +85,11 @@ function processData(error, data) {
         users.push(i);
     }
 
-    draw(data, noms_questions,users);
+    draw(data, noms_questions,users,valeurs_possibles);
 
 }
 
-function draw(data, nq, usrs) {
+function draw(data, nq, usrs,vp) {
 
     tc = [];
     svg.remove();
@@ -97,11 +112,12 @@ function draw(data, nq, usrs) {
     x = d3.scaleLinear().range([0, squareSize * usrs.length]);
     y = d3.scaleBand().rangeRound([0, squareSize * nq.length]);
 
-    y.domain(noms_questions);
+    var nq_aff = [];
+    for (n in nq){
+        nq_aff.push(nq[n].slice(2));
+    }
 
-    var vp = [0,1,2,3,4,5];
-
-
+    y.domain(nq_aff);
 
     // Add the x Axis
     svg.append("g")
@@ -157,7 +173,7 @@ function draw(data, nq, usrs) {
             d3.select("#tt").classed('hidden', false)
                 .attr('style', 'left:' + (mouse[0] + 15) +
                     'px; top:' + (mouse[1]+70) + 'px')
-                .html("user : " + d.user_id+ " - question : " + noms_questions[d.index_question]);
+                .html("user : " + d.user_id+ " - question : " + nq_aff[d.index_question]);
         })
 
         .on('mouseout', function(){
@@ -165,7 +181,7 @@ function draw(data, nq, usrs) {
         });
 
         // affichage de la légende
-        var legend = svg.selectAll(".legend")
+        var legend = svg.selectAll("legend")
             .data(vp)
             .enter().append("g")
             .attr("class", "legend")
