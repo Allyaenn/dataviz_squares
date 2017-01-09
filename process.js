@@ -1,11 +1,8 @@
 // set the dimensions and margins of the graph
 var margin = {top: 20, right: 20, bottom: 50, left: 70};
-var svg = d3.select("#image").append("svg");
-
+var svg;
 var squareSize = 20;
-
 var rect = null;
-
 var color = d3.scaleQuantize()
     .range(['#ece7f2','#a6bddb','#74a9cf','#3690c0','#0570b0','#045a8d','#023858']);
 
@@ -14,12 +11,7 @@ var save_data;
 
 var valeurs_possibles = [];
 
-queue()
-    .defer(d3.csv, "data2.csv")
-    .await(processData);
-
-function processData(error, data) {
-    if (error) throw error;
+d3.csv("data2.csv", function(data){
 
     noms_questions = [];
     meta_data = [];
@@ -85,29 +77,22 @@ function processData(error, data) {
         users.push(i);
     }
 
-    draw(data, noms_questions,users,valeurs_possibles);
+    svg = d3.select("#image").append("svg");
+    draw(data, noms_questions,users);
 
-}
+});
 
-function draw(data, nq, usrs,vp) {
+function draw(data, nq, usrs) {
 
     tc = [];
-    svg.remove();
-    svg = d3.select("#image").append("svg");
     for (item in nq) {
         for (var i = 0; i < usrs.length; i++) {
             tc.push({index_question: item, user_id: usrs[i], pos_id: i});
         }
     }
-    console.log(tc);
 
     width = 20 * usrs.length;
     height = 20 * noms_questions.length + 100;
-    svg.attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform",
-            "translate(" + margin.left + "," + margin.top + ")");
 
     x = d3.scaleLinear().range([0, squareSize * usrs.length]);
     y = d3.scaleBand().rangeRound([0, squareSize * nq.length]);
@@ -118,6 +103,15 @@ function draw(data, nq, usrs,vp) {
     }
 
     y.domain(nq_aff);
+
+    svg.remove();
+    svg = d3.select("#image").append("svg");
+    svg.attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+
 
     // Add the x Axis
     svg.append("g")
@@ -168,8 +162,6 @@ function draw(data, nq, usrs,vp) {
                 return parseInt(d);
             });
 
-
-
             d3.select("#tt").classed('hidden', false)
                 .attr('style', 'left:' + (mouse[0] + 15) +
                     'px; top:' + (mouse[1]+70) + 'px')
@@ -182,7 +174,7 @@ function draw(data, nq, usrs,vp) {
 
         // affichage de la légende
         var legend = svg.selectAll("legend")
-            .data(vp)
+            .data(valeurs_possibles)
             .enter().append("g")
             .attr("class", "legend")
             .attr("transform", function(d, i) { return "translate("+ i * 20 + ",0)"; })
