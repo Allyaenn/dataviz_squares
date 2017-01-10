@@ -6,65 +6,60 @@ var rect = null;
 var color = d3.scaleQuantize()
     .range(['#ece7f2','#a6bddb','#74a9cf','#3690c0','#0570b0','#045a8d','#023858']);
 
-// Get the data
-var save_data;
+// variables globales pour sauvegarder différents éléments
+var csv_data;
+var possible_answers = [];
+var questions_names = [];
+var md_names = [];
 
-var valeurs_possibles = [];
 
 d3.csv("data2.csv", function(data){
-
-    noms_questions = [];
-    meta_data = [];
-
-    save_data = data;
+    
+    csv_data = data;
 
 
     for (lab in data[0]) {
         if (lab[0] == "q" && lab[1] == "_" ) {
-            noms_questions.push(lab);
+            questions_names.push(lab);
         }
         else if (lab[0] == "m" && lab[1] == "_") {
-            meta_data.push(lab);
+            md_names.push(lab);
         }
     }
 
-
     for (var i = 0; i<data.length; i++){
-        for (var j=0; j<noms_questions.length; j++){
-            if ($.inArray(data[i][noms_questions[j]],valeurs_possibles) == -1){
-                valeurs_possibles.push(data[i][noms_questions[j]]);
+        for (var j=0; j<questions_names.length; j++){
+            if ($.inArray(data[i][questions_names[j]],possible_answers) == -1){
+                possible_answers.push(data[i][questions_names[j]]);
             }
         }
     }
 
-    valeurs_possibles.sort();
-    color.domain([valeurs_possibles[0], valeurs_possibles[valeurs_possibles.length-1]]);
-
-    console.log(valeurs_possibles);
+    possible_answers.sort();
+    color.domain([possible_answers[0], possible_answers[possible_answers.length-1]]);
 
     var dim = $("<div></div>").addClass("dimensions");
     $(dim).appendTo("#filtre");
 
-    for (md in meta_data) {
-        var div = $("<div></div>").addClass("dimension").html('<p><b>' + meta_data[md].slice(2) + ': </b></p>');
+    for (md in md_names) {
+        var div = $("<div></div>").addClass("dimension").html('<p><b>' + md_names[md].slice(2) + ': </b></p>');
         $(div).appendTo(dim);
 
         //creation des données possibles pour cette colonne
         var valeurs = [];
         for (var i = 0; i < data.length; i++) {
-            if ($.inArray(data[i][meta_data[md]], valeurs) == -1) {
-                valeurs.push(data[i][meta_data[md]]);
+            if ($.inArray(data[i][md_names[md]], valeurs) == -1) {
+                valeurs.push(data[i][md_names[md]]);
             }
         }
         valeurs.sort();
-        console.log(valeurs);
 
         var list = $('<ul class="grid"></ul>');
         $(list).appendTo(div);
 
         //parcours des données et générations des checkbox
         for (var i = 0; i < valeurs.length; i++) {
-            var check = $('<li><label><input type="checkbox" name=' + meta_data[md] + ' value="' + valeurs[i] + '" checked/>' + valeurs[i] + '</label></li>');
+            var check = $('<li><label><input type="checkbox" name=' + md_names[md] + ' value="' + valeurs[i] + '" checked/>' + valeurs[i] + '</label></li>');
             $(check).appendTo(list);
         }
 
@@ -78,28 +73,33 @@ d3.csv("data2.csv", function(data){
     }
 
     svg = d3.select("#image").append("svg");
-    draw(data, noms_questions,users);
+    draw(users);
 
 });
 
-function draw(data, nq, usrs) {
+function draw(usrs) {
 
     tc = [];
-    for (item in nq) {
+    for (item in questions_names) {
         for (var i = 0; i < usrs.length; i++) {
             tc.push({index_question: item, user_id: usrs[i], pos_id: i});
         }
     }
 
     width = 20 * usrs.length;
-    height = 20 * noms_questions.length + 100;
+    height = 20 * questions_names.length + 100;
 
     x = d3.scaleLinear().range([0, squareSize * usrs.length]);
-    y = d3.scaleBand().rangeRound([0, squareSize * nq.length]);
+    y = d3.scaleBand().rangeRound([0, squareSize * questions_names.length]);
 
     var nq_aff = [];
-    for (n in nq){
-        nq_aff.push(nq[n].slice(2));
+    for (n in questions_names){
+        nq_aff.push(questions_names[n].slice(2));
+    }
+
+    var md_aff = [];
+    for (md in md_names){
+        md_aff.push(md_names[md].slice(2));
     }
 
     y.domain(nq_aff);
@@ -154,7 +154,7 @@ function draw(data, nq, usrs) {
             return squareSize * d.index_question + margin.top + 2;
         })
         .attr('fill', function (d) {
-            var resp = data[d.user_id][nq[d.index_question]];
+            var resp = csv_data[d.user_id][questions_names[d.index_question]];
             return color(resp);
         })
         .on('mousemove', function(d) {
@@ -162,10 +162,14 @@ function draw(data, nq, usrs) {
                 return parseInt(d);
             });
 
+            var str = "<br>";
+            for (md in md_names) {
+                str = str + md_aff[md]+ " : " + csv_data[d.user_id][md_names[md]] + " ";
+            }
             d3.select("#tt").classed('hidden', false)
                 .attr('style', 'left:' + (mouse[0] + 15) +
                     'px; top:' + (mouse[1]+70) + 'px')
-                .html("user : " + d.user_id+ " - question : " + nq_aff[d.index_question]);
+                .html("user : " + d.user_id+ " - question : " + nq_aff[d.index_question] + str);
         })
 
         .on('mouseout', function(){
@@ -174,7 +178,7 @@ function draw(data, nq, usrs) {
 
         // affichage de la légende
         var legend = svg.selectAll("legend")
-            .data(valeurs_possibles)
+            .data(possible_answers)
             .enter().append("g")
             .attr("class", "legend")
             .attr("transform", function(d, i) { return "translate("+ i * 20 + ",0)"; })
@@ -202,21 +206,20 @@ function draw(data, nq, usrs) {
 function filtre(){
     console.log("filtrage des données");
     var users = [];
-    for (var i = 0; i<save_data.length;i++){
+    for (var i = 0; i<csv_data.length;i++){
         users.push(i);
     }
-    //console.log();
+
     //selection des checkbox non cochées
     var unchecked = $('input:checkbox:not(:checked)').map(function(){
         return $(this);
     });
-    //console.log(unchecked.get());
 
-    for (var j = 0; j<save_data.length;j++){
+    for (var j = 0; j<csv_data.length;j++){
         for (var k = 0; k<unchecked.length;k++){
             var n = unchecked[k].attr("name");
             var v = unchecked[k].val();
-            if(save_data[j][n] == v){
+            if(csv_data[j][n] == v){
                 var index = $.inArray(j,users);
                 if (index != -1)
                 {
@@ -225,8 +228,7 @@ function filtre(){
                 break;
             }
         }
-
     }
 
-    draw(save_data, noms_questions,users);
+    draw(users);
 }
