@@ -1,4 +1,3 @@
-// set the dimensions and margins of the graph
 var margin = {top: 20, right: 20, bottom: 50, left: 70};
 var svg;
 var squareSize = 20;
@@ -6,27 +5,31 @@ var rect = null;
 var color = d3.scaleQuantize()
     .range(['#ece7f2','#a6bddb','#74a9cf','#3690c0','#0570b0','#045a8d','#023858']);
 
-// variables globales pour sauvegarder différents éléments
+// variables globales pour sauvegarder différents éléments du fichier csv
 var csv_data;
-var possible_answers = [];
-var questions_names = [];
-var md_names = [];
+var possible_answers = []; //valeurs possibles pour les réponses
+var questions_names = []; //nom des colonnes comportant des questions
+var md_names = []; //noms des colonnes comportant des métadonnées
 
 
-d3.csv("data2.csv", function(data){
-    
+//lecture du fichier csv
+d3.csv("data.csv", function(data){
+
     csv_data = data;
 
-
+    //extraction des colonnes qui concernent des questions ou des métadonnées
     for (lab in data[0]) {
+        //si le nom de la colonne commence par "q_"
         if (lab[0] == "q" && lab[1] == "_" ) {
             questions_names.push(lab);
         }
+        //si le nom de la colonne commence par "m_"
         else if (lab[0] == "m" && lab[1] == "_") {
             md_names.push(lab);
         }
     }
 
+    //extraction des valeurs de réponses possible
     for (var i = 0; i<data.length; i++){
         for (var j=0; j<questions_names.length; j++){
             if ($.inArray(data[i][questions_names[j]],possible_answers) == -1){
@@ -36,24 +39,29 @@ d3.csv("data2.csv", function(data){
     }
 
     possible_answers.sort();
+    //definition du domain de l'échelle de couleur en fonction des valeurs possibles
     color.domain([possible_answers[0], possible_answers[possible_answers.length-1]]);
 
+    //création des checkbox permettant de filtrer les données
     var dim = $("<div></div>").addClass("dimensions");
     $(dim).appendTo("#filtre");
 
+    //création d'un expace pour chaque colonne de métadonnées
     for (md in md_names) {
         var div = $("<div></div>").addClass("dimension").html('<p><b>' + md_names[md].slice(2) + ': </b></p>');
         $(div).appendTo(dim);
 
-        //creation des données possibles pour cette colonne
+        //extraction des données possibles pour cette colonne
         var valeurs = [];
         for (var i = 0; i < data.length; i++) {
             if ($.inArray(data[i][md_names[md]], valeurs) == -1) {
                 valeurs.push(data[i][md_names[md]]);
             }
         }
+        //les valeurs seront affichées dans l'ordre alpha-numérique pour faciliter la lecture
         valeurs.sort();
 
+        //création d'une liste pour avoir une disposition des checkbox harmonieuse
         var list = $('<ul class="grid"></ul>');
         $(list).appendTo(div);
 
@@ -64,21 +72,26 @@ d3.csv("data2.csv", function(data){
         }
 
     }
+    //ajout du bouton "Filter" qui permet de mettre à jour la visualisation
     var button = $('<input type="button" class="btn" value="filter" onclick="filtre();"/>');
     $(button).appendTo("#filtre");
 
+    //pour le premier affichage de la mosaïque, tous les utilisateurs sont conservés
     var users = [];
     for (var i = 0; i<data.length;i++){
         users.push(i);
     }
 
+    //premier affichage de la mosaïque
     svg = d3.select("#image").append("svg");
     draw(users);
 
 });
 
+//fonction permettant de dessiner la mosaïque
 function draw(usrs) {
 
+    //création d'une "table croisée" des utilisateurs (avec leur )
     tc = [];
     for (item in questions_names) {
         for (var i = 0; i < usrs.length; i++) {
