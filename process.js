@@ -3,7 +3,7 @@ var svg;
 var squareSize = 20;
 var rect = null;
 var color = d3.scaleQuantize()
-    .range(['#ece7f2','#a6bddb','#74a9cf','#3690c0','#0570b0','#045a8d','#023858']);
+    .range(['#b2182b','#d6604d','#f4a582','#fddbc7','#f7f7f7','#d1e5f0','#92c5de','#4393c3','#2166ac']);
 
 // variables globales pour sauvegarder différents éléments du fichier csv
 var csv_data;
@@ -91,7 +91,9 @@ d3.csv("data.csv", function(data){
 //fonction permettant de dessiner la mosaïque
 function draw(usrs) {
 
-    //création d'une "table croisée" des utilisateurs (avec leur )
+    //création d'une "table croisée" des utilisateurs et des questions pour l'affichage des rectangles
+    //création d'un id user artificiel correspondant à la ligne du fichier le concernant
+    //le pos_id permet d'afficher les utilisateurs les uns a coté des autre dans la mosaïque
     tc = [];
     for (item in questions_names) {
         for (var i = 0; i < usrs.length; i++) {
@@ -99,25 +101,33 @@ function draw(usrs) {
         }
     }
 
+    //paramètrage de la taille de l'image en fonction du volume de données
     width = 20 * usrs.length;
     height = 20 * questions_names.length + 100;
 
+    //paramètrage de la taille des axes en fonction du volume de données
     x = d3.scaleLinear().range([0, squareSize * usrs.length]);
     y = d3.scaleBand().rangeRound([0, squareSize * questions_names.length]);
 
+    //on enlève le "q_" du noms des questions pour rendre l'affichage plus lisible
     var nq_aff = [];
     for (n in questions_names){
         nq_aff.push(questions_names[n].slice(2));
     }
 
+    //on enlève le "m_" du noms des métadonnées pour rendre l'affichage plus lisible
     var md_aff = [];
     for (md in md_names){
         md_aff.push(md_names[md].slice(2));
     }
 
+    //affectation du domaine de l'axe des ordonnées
     y.domain(nq_aff);
 
+    //effacement de l'ancienne image
     svg.remove();
+
+    //dessin de la nouvelle image
     svg = d3.select("#image").append("svg");
     svg.attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
@@ -126,12 +136,12 @@ function draw(usrs) {
             "translate(" + margin.left + "," + margin.top + ")");
 
 
-    // Add the x Axis
+    // ajout de l'axe des abcisses
     svg.append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
         .call(d3.axisTop(x).tickValues([]));
 
-    // text label for the x axis
+    // ajout du texte pour l'axe des abcisses
     svg.append("text")
         .attr("transform",
             "translate(" + (width / 2) + " ," +
@@ -139,12 +149,12 @@ function draw(usrs) {
         .style("text-anchor", "middle")
         .text("Individus");
 
-    // Add the y Axis
+    // ajout de l'axe des ordonnées
     svg.append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
         .call(d3.axisLeft(y));
 
-    // text label for the y axis
+    // ajout du texte pour l'axe des ordonnées
     svg.append("text")
         .attr("transform", "rotate(-90)")
         .attr("y", 0)
@@ -154,7 +164,7 @@ function draw(usrs) {
         .text("Questions");
 
 
-    //render heatmap rects
+    //affichage des rectangles
     rect = svg.selectAll('rect')
         .data(tc)
         .enter().append('rect')
@@ -170,11 +180,12 @@ function draw(usrs) {
             var resp = csv_data[d.user_id][questions_names[d.index_question]];
             return color(resp);
         })
+
+        //apparition du tooltip au survol de la souris
         .on('mousemove', function(d) {
             var mouse = d3.mouse(svg.node()).map(function(d) {
                 return parseInt(d);
             });
-
             var str = "<br>";
             for (md in md_names) {
                 str = str + md_aff[md]+ " : " + csv_data[d.user_id][md_names[md]] + " ";
@@ -184,7 +195,7 @@ function draw(usrs) {
                     'px; top:' + (mouse[1]+70) + 'px')
                 .html("user : " + d.user_id+ " - question : " + nq_aff[d.index_question] + str);
         })
-
+        //disparition du tooltip
         .on('mouseout', function(){
             d3.select("#tt").classed('hidden', true);
         });
@@ -206,7 +217,7 @@ function draw(usrs) {
             .style("fill", function(d) {return color(d);})
 
 
-        // affichage des valeurs représentées par la couleur
+        // affichage des valeurs représentées par les couleurs
         legend.append("text")
             .attr("x", 25)
             .attr("y", height)
@@ -228,6 +239,9 @@ function filtre(){
         return $(this);
     });
 
+    //reconstruction de la liste des individus affichés
+    // en omettant les individus qui ont des valeurs de métadonnées
+    //correspondant aux checkbox non cochées
     for (var j = 0; j<csv_data.length;j++){
         for (var k = 0; k<unchecked.length;k++){
             var n = unchecked[k].attr("name");
