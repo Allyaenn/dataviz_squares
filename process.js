@@ -144,10 +144,9 @@ function draw(usrs) {
     // ajout du texte pour l'axe des abcisses
     svg.append("text")
         .attr("transform",
-            "translate(" + (width / 2) + " ," +
-            ( margin.top - 5) + ")")
+            "translate(125," + (margin.top-10)+ ")")
         .style("text-anchor", "middle")
-        .text("Individus");
+        .text("Individuals");
 
     // ajout de l'axe des ordonnées
     svg.append("g")
@@ -183,16 +182,15 @@ function draw(usrs) {
 
         //apparition du tooltip au survol de la souris
         .on('mousemove', function(d) {
-            var mouse = d3.mouse(svg.node()).map(function(d) {
-                return parseInt(d);
-            });
+            var x = +d3.event.pageX;
+            var y = +d3.event.pageY;
             var str = "<br>";
             for (md in md_names) {
                 str = str + md_aff[md]+ " : " + csv_data[d.user_id][md_names[md]] + " ";
             }
             d3.select("#tt").classed('hidden', false)
-                .attr('style', 'left:' + (mouse[0] + 15) +
-                    'px; top:' + (mouse[1]+70) + 'px')
+                .attr('style', 'left:' + (x + 15) +
+                    'px; top:' + (y-70) + 'px')
                 .html("user : " + d.user_id+ " - question : " + nq_aff[d.index_question] + str);
         })
         //disparition du tooltip
